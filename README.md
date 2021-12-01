@@ -1,2 +1,5 @@
-# advendofcode2021
-Repo to some of Advent of Code Challenge 2021
+# Advend of Code 2021
+
+Repo to some of [Advent of Code Challenge 2021](https://adventofcode.com/) puzzles resolved in [R](https://www.r-project.org/).
+
+* [Day 01: Sonar Sweep](./day01/AdventOfCode_Day01.md)
