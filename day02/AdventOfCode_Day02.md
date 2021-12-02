@@ -71,21 +71,73 @@ Based on your calculations, the planned course doesn't seem to make any sense. Y
 
 In addition to horizontal position and depth, you'll also need to track a third value, aim, which also starts at 0. The commands also mean something entirely different than you first thought:
 
-down X increases your aim by X units.
-up X decreases your aim by X units.
-forward X does two things:
-It increases your horizontal position by X units.
-It increases your depth by your aim multiplied by X.
+* down X increases your aim by X units.
+* up X decreases your aim by X units.
+* forward X does two things:
+** It increases your horizontal position by X units.
+** It increases your depth by your aim multiplied by X.
+
 Again note that since you're on a submarine, down and up do the opposite of what you might expect: "down" means aiming in the positive direction.
 
 Now, the above example does something different:
 
-forward 5 adds 5 to your horizontal position, a total of 5. Because your aim is 0, your depth does not change.
-down 5 adds 5 to your aim, resulting in a value of 5.
-forward 8 adds 8 to your horizontal position, a total of 13. Because your aim is 5, your depth increases by 8*5=40.
-up 3 decreases your aim by 3, resulting in a value of 2.
-down 8 adds 8 to your aim, resulting in a value of 10.
-forward 2 adds 2 to your horizontal position, a total of 15. Because your aim is 10, your depth increases by 2*10=20 to a total of 60.
+* forward 5 adds 5 to your horizontal position, a total of 5. Because your aim is 0, your depth does not change.
+* down 5 adds 5 to your aim, resulting in a value of 5.
+* forward 8 adds 8 to your horizontal position, a total of 13. Because your aim is 5, your depth increases by 8*5=40.
+* up 3 decreases your aim by 3, resulting in a value of 2.
+* down 8 adds 8 to your aim, resulting in a value of 10.
+* forward 2 adds 2 to your horizontal position, a total of 15. Because your aim is 10, your depth increases by 2*10=20 to a total of 60.
+
 After following these new instructions, you would have a horizontal position of 15 and a depth of 60. (Multiplying these produces 900.)
 
-Using this new interpretation of the commands, calculate the horizontal position and depth you would have after following the planned course. What do you get if you multiply your final horizontal position by your final depth?
+Using this new interpretation of the commands, calculate the horizontal position and depth you would have after following the planned course. *What do you get if you multiply your final horizontal position by your final depth?*
+
+
+```r
+library(tidyverse)
+
+# using tidyverse is easier to track the convertion approach
+path <- tibble(course = input_raw) %>% 
+  # transform the char vector to a tibble if command (up, down, forward) and a unit value
+  separate(course, c("command", "units"),convert = T) %>% 
+  mutate(
+    # create a column when submarine changes position (with units of change)
+    forward_change = if_else(command=="forward",units,0L),
+    # creat a column when submarine change aims
+    aim_change = case_when(
+        command == "forward" ~ 0L,
+        command == "up" ~ -units,
+        command == "down" ~ units
+      ),
+    # track aim in each steps
+    aim = cumsum(aim_change),
+    # calculate change in depth when submarine moves
+    depth_change = aim*forward_change,
+    # calculate final coordinates
+    forward_dim  = cumsum(forward_change),
+    depth_dim    = cumsum(depth_change))
+
+# overview
+knitr::kable(head(path))
+```
+
+
+
+|command | units| forward_change| aim_change| aim| depth_change| forward_dim| depth_dim|
+|:-------|-----:|--------------:|----------:|---:|------------:|-----------:|---------:|
+|forward |     1|              1|          0|   0|            0|           1|         0|
+|down    |     9|              0|          9|   9|            0|           1|         0|
+|down    |     4|              0|          4|  13|            0|           1|         0|
+|forward |     4|              4|          0|  13|           52|           5|        52|
+|down    |     2|              0|          2|  15|            0|           5|        52|
+|down    |     7|              0|          7|  22|            0|           5|        52|
+
+```r
+# response
+path[nrow(path),]$forward_dim * path[nrow(path),]$depth_dim
+```
+
+```
+## [1] 1592426537
+```
+
