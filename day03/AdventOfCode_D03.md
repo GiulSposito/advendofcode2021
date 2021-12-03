@@ -1,5 +1,5 @@
 ---
-title: "Day 2: Binay Diagnostic"
+title: "Day 3: Binay Diagnostic"
 output:
   html_document:
     keep_md: yes
