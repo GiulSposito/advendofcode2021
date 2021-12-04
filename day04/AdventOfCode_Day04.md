@@ -140,26 +140,39 @@ boards
 ```
 
 ```r
+# I'll generate all sequences to be marked from each board (all lines and all rows)
+# for each sequence I'll test against the draw sequence
+# get which position in the draw sequence we get the match in the last
+# so a board is marked in the sequence which least (min) last (max) draw position
 winnerBoard <- boards %>% 
+  # for each board
   map_df(function(.b){
     tibble(
+      # generate a tibble with the board and the unmarked possible sequence
       boardNumbers = list(.b),
-      boardComb    = list(rbind(.b, t(.b)))
+      boardComb    = list(rbind(.b, t(.b))) # all rows and all columns
     )
   }, .id="boardId") %>% 
+  # unnest the tibblel according with each possible sequence to be marked
   mutate( seqComb = map(boardComb, ~split(.x,1:nrow(.x))) ) %>% 
   unnest( seqComb ) %>% 
+  # for each sequence in all boards
   mutate( markedSeq = map(seqComb, function(.bcSeq, .draws){
     .bcSeq %>% 
+        # check the draw positions necessary do mark the sequence
         map(function(.num,.dv){
           .num == .dv
         }, .dv=.draws) %>% 
         reduce(`|`) %>% 
-        which()
+        which() 
   }, .draws=draws)) %>% 
-  mutate( winners = map_int(markedSeq, length),
-          winnerRound = map_int(markedSeq, max) ) %>% 
-  filter(winners==5, winnerRound==min(winnerRound))
+  mutate( 
+    # count marked numbers in the sequence (should be always 5)
+    winners = map_int(markedSeq, length), 
+    # last draw position necessary to mark all numbers in the sequence
+    winnerRound = map_int(markedSeq, max) ) %>% 
+  # which board has the lower last draw number
+  filter(winners==5, winnerRound==min(winnerRound)) 
 
 # Winner Board Number
 winnerBoard$boardId
@@ -348,6 +361,8 @@ lastWinBoard <- boards %>%
   mutate( winners = map_int(markedSeq, length),
           winnerRound = map_int(markedSeq, max),
           winnerDrawPosition = ) %>% 
+  # in this case we want to check which board has the highest (max)
+  # lower (min) draw position
   group_by(boardId) %>% 
   filter(winners==5, winnerRound==min(winnerRound)) %>% 
   ungroup() %>% 
