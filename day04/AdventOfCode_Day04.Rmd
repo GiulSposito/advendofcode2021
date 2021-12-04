@@ -215,3 +215,79 @@ justCalled
 justCalled * sumUnmarked
 
 ```
+
+
+## Part Two
+
+On the other hand, it might be wise to try a different strategy: let the giant squid win.
+
+You aren't sure how many bingo boards a giant squid could play at once, so rather than waste time counting its arms, the safe thing to do is to figure out which board will win last and choose that one. That way, no matter which boards it picks, it will win for sure.
+
+In the above example, the second board is the last to win, which happens after 13 is eventually called and its middle column is completely marked. If you were to keep playing until this point, the second board would have a sum of unmarked numbers equal to 148 for a final score of 148 * 13 = 1924.
+
+Figure out which board will win last. Once it wins, what would its final score be?
+
+```{r}
+# read raw data
+input_raw <- readLines("input.txt")
+
+# extract draws sequence
+draws <- strsplit(input_raw[1],",")[[1]] |> 
+  as.integer()
+
+# prepare board data
+boards_raw <- input_raw[c(-1,-2)] %>% 
+  str_c(collapse = " ") %>% 
+  str_split(" +") %>% 
+  .[[1]] %>% 
+  as.integer()
+
+# build boards
+boards <- 1:(length(boards_raw)/25) %>% 
+  map(function(.x,.dt){
+    .dt[(.x*25-24):(.x*25)] %>% 
+      matrix(nrow=5, ncol=5, byrow = T) %>% 
+      return()
+  }, .dt=boards_raw)
+
+# find winner board
+lastWinBoard <- boards %>% 
+  map_df(function(.b){
+    tibble(
+      boardNumbers = list(.b),
+      boardComb    = list(rbind(.b, t(.b)))
+    )
+  }, .id="boardId") %>% 
+  mutate( seqComb = map(boardComb, ~split(.x,1:nrow(.x))) ) %>% 
+  unnest( seqComb ) %>% 
+  mutate( markedSeq = map(seqComb, function(.bcSeq, .draws){
+    .bcSeq %>% 
+        map(function(.num,.dv){
+          .num == .dv
+        }, .dv=.draws) %>% 
+        reduce(`|`) %>% 
+        which()
+  }, .draws=draws)) %>% 
+  mutate( winners = map_int(markedSeq, length),
+          winnerRound = map_int(markedSeq, max),
+          winnerDrawPosition = ) %>% 
+  group_by(boardId) %>% 
+  filter(winners==5, winnerRound==min(winnerRound)) %>% 
+  ungroup() %>% 
+  filter(winnerRound==max(winnerRound))
+
+# the sum of all unmarked numbers on that board
+boardNumbers <- c(lastWinBoard$boardNumbers[[1]]) 
+markedNumbers <- draws[1:lastWinBoard$winnerRound]
+sumUnmarked <- sum(boardNumbers[ !boardNumbers %in% markedNumbers ])
+sumUnmarked
+
+# the number that was just called when the board won
+justCalled <- draws[lastWinBoard$winnerRound]
+justCalled
+
+#response
+justCalled * sumUnmarked
+
+```
+
