@@ -141,9 +141,14 @@ boards
 
 ```r
 winnerBoard <- boards %>% 
-  map_df(function(.b){tibble(boardNumbers = list(.b))},.id="boardId") %>% 
-  mutate(seqComb = map(boardNumbers, function(.bc){split(.bc, 1:nrow(.bc))})) %>% 
-  unnest(seqComb) %>% 
+  map_df(function(.b){
+    tibble(
+      boardNumbers = list(.b),
+      boardComb    = list(rbind(.b, t(.b)))
+    )
+  }, .id="boardId") %>% 
+  mutate( seqComb = map(boardComb, ~split(.x,1:nrow(.x))) ) %>% 
+  unnest( seqComb ) %>% 
   mutate( markedSeq = map(seqComb, function(.bcSeq, .draws){
     .bcSeq %>% 
         map(function(.num,.dv){
@@ -237,9 +242,14 @@ boards <- 1:(length(boards_raw)/25) %>%
 
 # find winner board
 winnerBoard <- boards %>% 
-  map_df(function(.b){tibble(boardNumbers = list(.b))},.id="boardId") %>% 
-  mutate(seqComb = map(boardNumbers, function(.bc){split(.bc, 1:nrow(.bc))})) %>% 
-  unnest(seqComb) %>% 
+  map_df(function(.b){
+    tibble(
+      boardNumbers = list(.b),
+      boardComb    = list(rbind(.b, t(.b)))
+    )
+  }, .id="boardId") %>% 
+  mutate( seqComb = map(boardComb, ~split(.x,1:nrow(.x))) ) %>% 
+  unnest( seqComb ) %>% 
   mutate( markedSeq = map(seqComb, function(.bcSeq, .draws){
     .bcSeq %>% 
         map(function(.num,.dv){
@@ -260,7 +270,7 @@ sumUnmarked
 ```
 
 ```
-## [1] 819
+## [1] 668
 ```
 
 ```r
@@ -270,7 +280,7 @@ justCalled
 ```
 
 ```
-## [1] 8
+## [1] 66
 ```
 
 ```r
@@ -279,5 +289,5 @@ justCalled * sumUnmarked
 ```
 
 ```
-## [1] 6552
+## [1] 44088
 ```
