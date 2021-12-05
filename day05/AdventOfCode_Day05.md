@@ -208,9 +208,9 @@ vent_map <- read_delim(".//test.txt", delim = " -> ",
   filter(
       # horizontal lines and rows
       (x1==x2 | y1==y2) |
-      # -45o degree line
+      # -45o degree lines
       ((x2-x1) == (y2-y1)) |
-      # + 45o degree line
+      # + 45o degree lines
       ((x2-x1) == -(y2-y1))) %>%
   # calc the displacement 
   mutate( delta.x = map2(x1,x2, seq),
@@ -234,6 +234,8 @@ vent_map %>%
 ```
 
 ![](AdventOfCode_Day05_files/figure-html/unnamed-chunk-3-1.png)<!-- -->
+
+
 
 ```r
 # counting
@@ -271,9 +273,9 @@ read_delim(".//input.txt", delim = " -> ",
   filter(
       # horizontal lines and rows
       (x1==x2 | y1==y2) |
-      # -45o degree line
+      # -45o degree lines
       ((x2-x1) == (y2-y1)) |
-      # + 45o degree line
+      # + 45o degree lines
       ((x2-x1) == -(y2-y1))) %>%
   # calc the displacement 
   mutate( delta.x = map2(x1,x2, seq),
@@ -297,3 +299,6 @@ read_delim(".//input.txt", delim = " -> ",
 ## [1] 21140
 ```
 
+## References
+
+* [https://limnu.com/sketch-easy-90-degree-rotate-vectors/](https://limnu.com/sketch-easy-90-degree-rotate-vectors/)
