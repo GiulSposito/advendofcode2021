@@ -7,5 +7,6 @@ Repo to some of [Advent of Code Challenge 2021](https://adventofcode.com/) puzzl
 * [Day 03: Binay Diagnostic](./day03/AdventOfCode_Day03.md)
 * [Day 04: Giant Squid](./day04/AdventOfCode_Day04.md)
 * [Day 05: Hydrothermal Venture](./day05/AdventOfCode_Day05.md)
+* [Day 06: Lanternfish](./day06/AdventOfCode_Day06.md)
 
 

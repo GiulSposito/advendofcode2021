@@ -65,7 +65,8 @@ Each day, a 0 becomes a 6 and adds a new 8 to the end of the list, while each ot
 
 In this example, after 18 days, there are a total of 26 fish. After 80 days, there would be a total of **5934**.
 
-```{r warning=FALSE, message=FALSE}
+
+```r
 library(tidyverse)
 
 input_raw <- c(3,4,3,1,2)
@@ -106,15 +107,18 @@ for(i in 1:80) {
   
 # how many fishes
 nrow(fishes)
+```
 
-
+```
+## [1] 5934
 ```
 
 ### Puzzle Answer
 
 Find a way to simulate lanternfish. How many lanternfish would there be after 80 days?
 
-```{r}
+
+```r
 # raw data
 input_raw <- readLines("./input.txt") 
 
@@ -160,7 +164,10 @@ for(i in 1:80) {
   
 # how many fishes
 nrow(fishes)
+```
 
+```
+## [1] 343441
 ```
 
 ## Part 02
@@ -171,7 +178,8 @@ Suppose the lanternfish live forever and have unlimited food and space. Would th
 
 After 256 days in the example above, there would be a total of 26984457539 lanternfish!
 
-```{r warning=FALSE, message=FALSE}
+
+```r
 # to work with big numbers
 library(gmp)
 
@@ -217,14 +225,19 @@ simulateLanternFishPop <- function(iniAges, days){
 # lets test
 iniAges <- c(3,4,3,1,2)
 simulateLanternFishPop(iniAges, 256)
+```
 
+```
+## Big Integer ('bigz') :
+## [1] 26984457539
 ```
 
 ### Puzzle Answer
 
 How many lanternfish would there be after 256 days?
 
-```{r}
+
+```r
 # raw data
 input_raw <- readLines("./input.txt") 
 
@@ -235,5 +248,10 @@ input <- input_raw %>%
   as.integer()
 
 simulateLanternFishPop(input, 256)
+```
+
+```
+## Big Integer ('bigz') :
+## [1] 1569108373832
 ```
 
