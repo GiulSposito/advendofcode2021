@@ -47,8 +47,7 @@ For each display, you watch the changing signals for a while, make a note of **a
 For example, here is what you might see in a single entry in your notes:
 
 ```
-acedgfb cdfbe gcdfa fbcad dab cefabd cdfgeb eafb cagedb ab |
-cdfeb fcadb cdfeb cdbaf
+acedgfb cdfbe gcdfa fbcad dab cefabd cdfgeb eafb cagedb ab | cdfeb fcadb cdfeb cdbaf
 ```
 
 (The entry is wrapped here to two lines so it fits; in your notes, it will all be on a single line.)
@@ -60,26 +59,16 @@ Using this information, you should be able to work out which combination of sign
 For now, **focus on the easy digits**. Consider this larger example:
 
 ```
-be cfbegad cbdgef fgaecd cgeb fdcge agebfd fecdb fabcd edb |
-fdgacbe cefdb cefbgd gcbe
-edbfga begcd cbg gc gcadebf fbgde acbgfd abcde gfcbed gfec |
-fcgedb cgb dgebacf gc
-fgaebd cg bdaec gdafb agbcfd gdcbef bgcad gfac gcb cdgabef |
-cg cg fdcagb cbg
-fbegcd cbd adcefb dageb afcb bc aefdc ecdab fgdeca fcdbega |
-efabcd cedba gadfec cb
-aecbfdg fbg gf bafeg dbefa fcge gcbea fcaegb dgceab fcbdga |
-gecf egdcabf bgf bfgea
-fgeab ca afcebg bdacfeg cfaedg gcfdb baec bfadeg bafgc acf |
-gebdcfa ecba ca fadegcb
-dbcfg fgd bdegcaf fgec aegbdf ecdfab fbedc dacgb gdcebf gf |
-cefg dcbef fcge gbcadfe
-bdfegc cbegaf gecbf dfcage bdacg ed bedf ced adcbefg gebcd |
-ed bcgafe cdgba cbgef
-egadfb cdbfeg cegd fecab cgb gbdefca cg fgcdab egfdb bfceg |
-gbdfcae bgc cg cgb
-gcafb gcf dcaebfg ecagb gf abcdeg gaef cafbge fdbac fegbdc |
-fgae cfgab fg bagce
+be cfbegad cbdgef fgaecd cgeb fdcge agebfd fecdb fabcd edb | fdgacbe cefdb cefbgd gcbe
+edbfga begcd cbg gc gcadebf fbgde acbgfd abcde gfcbed gfec | fcgedb cgb dgebacf gc
+fgaebd cg bdaec gdafb agbcfd gdcbef bgcad gfac gcb cdgabef | cg cg fdcagb cbg
+fbegcd cbd adcefb dageb afcb bc aefdc ecdab fgdeca fcdbega | efabcd cedba gadfec cb
+aecbfdg fbg gf bafeg dbefa fcge gcbea fcaegb dgceab fcbdga | gecf egdcabf bgf bfgea
+fgeab ca afcebg bdacfeg cfaedg gcfdb baec bfadeg bafgc acf | gebdcfa ecba ca fadegcb
+dbcfg fgd bdegcaf fgec aegbdf ecdfab fbedc dacgb gdcebf gf | cefg dcbef fcge gbcadfe
+bdfegc cbegaf gecbf dfcage bdacg ed bedf ced adcbefg gebcd | ed bcgafe cdgba cbgef
+egadfb cdbfeg cegd fecab cgb gbdefca cg fgcdab egfdb bfceg | gbdfcae bgc cg cgb
+gcafb gcf dcaebfg ecagb gf abcdeg gaef cafbge fdbac fegbdc | fgae cfgab fg bagce
 ```
 
 Because the digits 1, 4, 7, and 8 each use a unique number of segments, you should be able to tell which combinations of signals correspond to those digits. Counting **only digits in the output values** (the part after | on each line), in the above example, there are 26 instances of digits that use a unique number of segments (highlighted above).
@@ -131,8 +120,7 @@ read_delim("./input.txt", delim = " | ", col_names = c("pattern","output")) %>%
 Through a little deduction, you should now be able to determine the remaining digits. Consider again the first example above:
 
 ```
-acedgfb cdfbe gcdfa fbcad dab cefabd cdfgeb eafb cagedb ab |
-cdfeb fcadb cdfeb cdbaf
+acedgfb cdfbe gcdfa fbcad dab cefabd cdfgeb eafb cagedb ab | cdfeb fcadb cdfeb cdbaf
 ```
 After some careful analysis, the mapping between signal wires and segments only make sense in the following configuration:
 
@@ -187,7 +175,107 @@ Adding all of the output values in this larger example produces **61229**.
 
 ```{r warning=FALSE, message=FALSE}
 
-input <- read_delim("./test.txt", delim = " | ", col_names = c("pattern","output"))
+# input data
+input <- read_delim("./test.txt", delim = " | ", col_names = c("pattern","output")) %>% 
+  mutate(id = 1:nrow(.) ) %>% 
+  select(id, everything())
+
+# normal digits segment sequence mapping
+digits <- tibble(
+    digit = c(0:9),
+    segs = c("abcefg","cf","acdeg","acdfg","bcdf","abdfg","abdefg","acf","abcdefg","abcdfg")
+  )
+
+decode_segments <- function(.pat, .out, .dig){
+
+  # transform the string inputs in vectors
+  input_patterns <- .pat %>% 
+    str_split(pattern=" ") %>% unlist()
+  
+  output_values <- .out %>% 
+    str_split(pattern=" ") %>% unlist()
+
+  # frequency analysis
+  seg_freq <- str_c(input_patterns, collapse="") %>% 
+    str_split("") %>% 
+    unlist() %>% 
+    enframe() %>% 
+    count(value, sort = T)
+  
+  # the segment that appers 4 times is 'e'
+  seg_e <- filter(seg_freq, n==4)$value
+
+  # the segment that appers 6 times is 'b'
+  seg_b <- filter(seg_freq, n==6)$value
+  
+  # the segment that appers 9 times is 'f' 
+  seg_f <- filter(seg_freq, n==9)$value
+  
+  # length analysis
+  seg_len <- input_patterns %>% 
+    enframe() %>% 
+    mutate(length = map_int(value,nchar)) %>% 
+    rename(pattern=value)
+  
+  # pattern with length 2 (#1), removing 'f' to find segment 'c'
+  seg_c <- filter(seg_len, length==2)$pattern %>% str_remove_all(seg_f)
+  
+  # pattern with length 3 (#7), removing 'c' and 'f' to find segment 'a'
+  seg_a <- filter(seg_len, length==3)$pattern %>% str_remove_all(paste(seg_c, seg_f, sep="|"))
+  
+  # pattern with length 4 (#4), removing 'b', 'c' and 'f' to find segment 'd'
+  seg_d <- filter(seg_len, length==4)$pattern %>% str_remove_all(paste(seg_b, seg_c, seg_f, sep="|"))
+  
+  # pattern with length 7 (#8), removing all known segments to find segment 'g'
+  seg_g <- filter(seg_len, length==7)$pattern %>% str_remove_all(paste(seg_a, seg_b, seg_c, seg_d, seg_e, seg_f, sep="|"))
+  
+  # creating a from/to segment mapping
+  seg_map <- tibble(
+    to = letters[1:7],
+    from = c(seg_a, seg_b, seg_c, seg_d, seg_e, seg_f, seg_g)
+  )
+  
+  # translating the segments in the output values
+  output_values %>% 
+    enframe() %>% 
+    mutate(name=1:nrow(.)) %>% 
+    # for each sequence split the segments
+    mutate( segs = map(value,function(.x){
+      .x %>% 
+        str_split("") %>% 
+        unlist() %>% 
+        enframe() %>% 
+        select(seg=value) %>% 
+        return()
+    })) %>% 
+    unnest(segs) %>% 
+    # apply segment decoding 
+    inner_join(seg_map, by=c("seg"="from")) %>% 
+    arrange(name,to) %>% 
+    group_by(name) %>% 
+    # bring together the segments decoded to a digit sequence
+    mutate(decoded = str_c(to, collapse = "")) %>% 
+    ungroup() %>% 
+    select(name, value, decoded) %>% 
+    distinct() %>% 
+    # applying the normal pattern decoding to find the digit
+    inner_join(.dig, by=c("decoded"="segs")) %>% 
+    pull(digit) %>% 
+    # bring together the number shown in the display
+    str_c(collapse = "") %>% 
+    as.integer() %>% 
+    return()  
+}
+
+# process input
+input_translated <- input %>% 
+  mutate( display_number = map2_int(pattern, output, decode_segments, .dig = digits))
+
+# let's
+head(input_translated)
+
+# final number
+sum(input_translated$display_number)
 
 ```
 
@@ -195,3 +283,15 @@ input <- read_delim("./test.txt", delim = " | ", col_names = c("pattern","output
 ### Puzzle Answer
 
 For each entry, determine all of the wire/segment connections and decode the four-digit output values. What do you get if you add up all of the output values?
+
+```{r message=FALSE, warning=FALSE}
+
+# input data
+read_delim("./input.txt", delim = " | ", col_names = c("pattern","output")) %>% 
+  mutate(id = 1:nrow(.) ) %>% 
+  select(id, everything()) %>% 
+  mutate( display_number = map2_int(pattern, output, decode_segments, .dig = digits)) %>% 
+  summarise( answer = sum(display_number) )
+
+```
+
