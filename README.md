@@ -1,4 +1,4 @@
-# Advend of Code 2021
+# Advent of Code 2021
 
 Repo to some of [Advent of Code Challenge 2021](https://adventofcode.com/) puzzles resolved in [R](https://www.r-project.org/).
 
@@ -10,5 +10,6 @@ Repo to some of [Advent of Code Challenge 2021](https://adventofcode.com/) puzzl
 * [Day 06: Lanternfish](./day06/AdventOfCode_Day06.md)
 * [Day 07: The Treachery of Whales](./day07/AdventOfCode_Day07.md)
 * [Day 08: Seven Segment Search](./day08/AdventOfCode_Day08.md)
+* [Day 09: Smoke Basin](./day09/AdventOfCode_Day09.md)
 
 
