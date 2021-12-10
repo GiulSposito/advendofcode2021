@@ -180,97 +180,11 @@ Find the three largest basins and multiply their sizes together. In the above ex
 
 ```r
 library(tidyverse)
-```
-
-```
-## ── Attaching packages ─────────────────────────────────────── tidyverse 1.3.1 ──
-```
-
-```
-## ✓ ggplot2 3.3.5     ✓ purrr   0.3.4
-## ✓ tibble  3.1.6     ✓ dplyr   1.0.7
-## ✓ tidyr   1.1.4     ✓ stringr 1.4.0
-## ✓ readr   2.1.0     ✓ forcats 0.5.1
-```
-
-```
-## ── Conflicts ────────────────────────────────────────── tidyverse_conflicts() ──
-## x dplyr::filter() masks stats::filter()
-## x dplyr::lag()    masks stats::lag()
-```
-
-```r
 library(igraph)
-```
-
-```
-## 
-## Attaching package: 'igraph'
-```
-
-```
-## The following objects are masked from 'package:dplyr':
-## 
-##     as_data_frame, groups, union
-```
-
-```
-## The following objects are masked from 'package:purrr':
-## 
-##     compose, simplify
-```
-
-```
-## The following object is masked from 'package:tidyr':
-## 
-##     crossing
-```
-
-```
-## The following object is masked from 'package:tibble':
-## 
-##     as_data_frame
-```
-
-```
-## The following objects are masked from 'package:stats':
-## 
-##     decompose, spectrum
-```
-
-```
-## The following object is masked from 'package:base':
-## 
-##     union
-```
-
-```r
 library(tidygraph)
-```
 
-```
-## 
-## Attaching package: 'tidygraph'
-```
-
-```
-## The following object is masked from 'package:igraph':
-## 
-##     groups
-```
-
-```
-## The following object is masked from 'package:stats':
-## 
-##     filter
-```
-
-```r
 # test data as input
-# input_raw <- c("2199943210","3987894921","9856789892","8767896789","9899965678")
-
-# input as array of lines
-input_raw <- readLines("./input.txt")
+input_raw <- c("2199943210","3987894921","9856789892","8767896789","9899965678")
 
 # vector of integers
 input <- paste0(input_raw, collapse = "") |>
@@ -278,13 +192,20 @@ input <- paste0(input_raw, collapse = "") |>
   unlist() |>
   as.integer()
 
+# matrix representing the floor map
 m <- matrix(input, nrow = length(input_raw), byrow = T)
 
+# the strategy here is to build a graph of adjacency positions
+# and remove the nodes if height==9
+# and measure the sizes of each graph component
+
+# map of nodes
 nodes <- expand.grid(list(x=1:dim(m)[1], y=1:dim(m)[2])) %>% 
   mutate(node_id = 1:nrow(.)) %>% 
   mutate(height  = c(m)) %>% 
   relocate(node_id, everything())
   
+# edges of adjacency
 edges <- nodes %>% 
   split(1:nrow(.)) %>% 
   map_df(function(.n,.nodes,.mdim){
@@ -299,28 +220,101 @@ edges <- nodes %>%
     select(from_node_id , to_node_id = node_id)
   }, .nodes=nodes, .mdim = dim(m))
 
+# build the graph
 g <- edges %>% 
   set_names(c("from","to")) %>% 
   as_tbl_graph(directed=F) %N>% 
   mutate( heigh=c(m))
 
+# remove nodes 9
 g %N>% 
   filter(heigh!=9) %>% 
+  # explicit the graph components (the basis)
   mutate( grupo =  as.factor(group_components()) ) %>% 
+  # the size of the basis
   add_count(grupo) %>% 
   as_tibble() %>% 
   group_by(grupo,n) %>% 
   nest() %>% 
   ungroup() %>% 
+  # top three basis
   top_n(3,n) %>% 
+  # sum of then sizes
   summarise( answer = prod(n) )
 ```
 
 ```
-## Warning: The `add` argument of `group_by()` is deprecated as of dplyr 1.0.0.
-## Please use the `.add` argument instead.
-## This warning is displayed once every 8 hours.
-## Call `lifecycle::last_lifecycle_warnings()` to see where this warning was generated.
+## # A tibble: 1 × 1
+##   answer
+##    <dbl>
+## 1   1134
+```
+
+
+### Puzzle Answer
+
+What do you get if you multiply together the sizes of the three largest basins?
+
+
+```r
+# input as array of lines
+input_raw <- readLines("./input.txt")
+
+# vector of integers
+input <- paste0(input_raw, collapse = "") |>
+  strsplit("") |>
+  unlist() |>
+  as.integer()
+
+# matrix representing the floor map
+m <- matrix(input, nrow = length(input_raw), byrow = T)
+
+# the strategy here is to build a graph of adjacency positions
+# and remove the nodes if height==9
+# and measure the sizes of each graph component
+
+# map of nodes
+nodes <- expand.grid(list(x=1:dim(m)[1], y=1:dim(m)[2])) %>% 
+  mutate(node_id = 1:nrow(.)) %>% 
+  mutate(height  = c(m)) %>% 
+  relocate(node_id, everything())
+  
+# edges of adjacency
+edges <- nodes %>% 
+  split(1:nrow(.)) %>% 
+  map_df(function(.n,.nodes,.mdim){
+    right_x <- .n$x
+    right_y <- .n$y+1
+    down_x  <- .n$x+1
+    down_y  <- .n$y
+    .nodes %>% 
+      mutate(from_node_id = .n$node_id) %>% 
+      filter( (x==right_x & y==right_y) |
+              (x==down_x & y==down_y) ) %>% 
+    select(from_node_id , to_node_id = node_id)
+  }, .nodes=nodes, .mdim = dim(m))
+
+# build the graph
+g <- edges %>% 
+  set_names(c("from","to")) %>% 
+  as_tbl_graph(directed=F) %N>% 
+  mutate( heigh=c(m))
+
+# remove nodes 9
+g %N>% 
+  filter(heigh!=9) %>% 
+  # explicit the graph components (the basis)
+  mutate( grupo =  as.factor(group_components()) ) %>% 
+  # the size of the basis
+  add_count(grupo) %>% 
+  as_tibble() %>% 
+  group_by(grupo,n) %>% 
+  nest() %>% 
+  ungroup() %>% 
+  # top three basis
+  top_n(3,n) %>% 
+  # sum of then sizes
+  summarise( answer = prod(n) )
 ```
 
 ```
@@ -329,9 +323,4 @@ g %N>%
 ##     <dbl>
 ## 1 1558722
 ```
-
-
-### Puzzle Answer
-
-What do you get if you multiply together the sizes of the three largest basins?
 

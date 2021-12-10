@@ -62,11 +62,14 @@ Did you know that syntax checkers actually have contests to see who can get the 
 * `}`: 1197 points.
 * `>`: 25137 points.
 
+### Test Case
+
 In the above example, an illegal ) was found twice (2*3 = 6 points), an illegal ] was found once (57 points), an illegal } was found once (1197 points), and an illegal > was found once (25137 points). So, the total syntax error score for this file is 6+57+1197+25137 = 26397 points!
 
 ```{r message=FALSE, warning=FALSE}
 library(tidyverse)
 
+# test case
 input <- c("[({(<(())[]>[[{[]{<()<>>",
   "[(()[<>])]({[<{<<[]>>(",
   "{([(<{}[<>[]}>{[]{[(<()>",
@@ -78,47 +81,62 @@ input <- c("[({(<(())[]>[[{[]{<()<>>",
   "<{([([[(<>()){}]>(<<{{",
   "<{([{{}}[<[[[<>{}]]]>[]]")
 
-input <- readLines("./input.txt")
-
+# for each line
 illegals <- input |>
   map(function(codeline){
     
+    # opening chars and respective closing chars
     openChunk <- c("{","(","[","<")
     closeChunk <- c("}",")","]",">")
+    
+    # heap to track open chunks
     heap <- vector("character",0)
+
+    # illegal closing track
     illegal <- vector("character",0)
+    
+    # transform a line in a char vector
     vcode <- codeline |>
       strsplit("") |>
       unlist() 
     
+    # for each char
     for(i in 1:length(vcode)){
-    
+
       char <- vcode[i]
+      
+      # if we are opening a chunk we put it in the stack tracing
       if(char %in% openChunk)
         heap[length(heap)+1] <- char
     
+      # if we are closing we need to check if we are closing with correct char
       if(char %in% closeChunk){
+        # last open chunk char
         lastOpen <- heap[length(heap)]
+        # is we should expect?
         if (which(lastOpen==openChunk) == which(char==closeChunk)) {
-          # legal
+          # yes: legal -> remove the chunk from the stack
           heap<-heap[-length(heap)]
         } else {
-          # illegal
+          # no: illegal -> we store the illegal char
           illegal[length(illegal)+1] <- char
         }
       }
     }
     
+    # for this exercise we only interesting in the first illegal char
     return(head(illegal,1))
     
   }) |>
   flatten_chr()
 
+# illegal char points table
 points <- tibble(
   char = c(")","]","}",">"),
   points = c(3,57,1197,25137)
 )
 
+# que compute the final score
 illegals %>% 
   enframe(value="char") %>% 
   inner_join(points, by="char") %>% 
@@ -126,5 +144,75 @@ illegals %>%
 
 ```
 
+### Puzzle Answer
 
 Find the first illegal character in each corrupted line of the navigation subsystem. What is the total syntax error score for those errors?
+
+```{r}
+
+# input data
+input <- readLines("./input.txt")
+
+# for each line
+illegals <- input |>
+  map(function(codeline){
+    
+    # opening chars and respective closing chars
+    openChunk <- c("{","(","[","<")
+    closeChunk <- c("}",")","]",">")
+    
+    # heap to track open chunks
+    heap <- vector("character",0)
+
+    # illegal closing track
+    illegal <- vector("character",0)
+    
+    # transform a line in a char vector
+    vcode <- codeline |>
+      strsplit("") |>
+      unlist() 
+    
+    # for each char
+    for(i in 1:length(vcode)){
+
+      char <- vcode[i]
+      
+      # if we are opening a chunk we put it in the stack tracing
+      if(char %in% openChunk)
+        heap[length(heap)+1] <- char
+    
+      # if we are closing we need to check if we are closing with correct char
+      if(char %in% closeChunk){
+        # last open chunk char
+        lastOpen <- heap[length(heap)]
+        # is we should expect?
+        if (which(lastOpen==openChunk) == which(char==closeChunk)) {
+          # yes: legal -> remove the chunk from the stack
+          heap<-heap[-length(heap)]
+        } else {
+          # no: illegal -> we store the illegal char
+          illegal[length(illegal)+1] <- char
+        }
+      }
+    }
+    
+    # for this exercise we only interesting in the first illegal char
+    return(head(illegal,1))
+    
+  }) |>
+  flatten_chr()
+
+# illegal char points table
+points <- tibble(
+  char = c(")","]","}",">"),
+  points = c(3,57,1197,25137)
+)
+
+# que compute the final score
+illegals %>% 
+  enframe(value="char") %>% 
+  inner_join(points, by="char") %>% 
+  summarise( answer = sum(points) )
+
+```
+
