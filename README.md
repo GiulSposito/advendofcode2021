@@ -11,5 +11,6 @@ Repo to some of [Advent of Code Challenge 2021](https://adventofcode.com/) puzzl
 * [Day 07: The Treachery of Whales](./day07/AdventOfCode_Day07.md)
 * [Day 08: Seven Segment Search](./day08/AdventOfCode_Day08.md)
 * [Day 09: Smoke Basin](./day09/AdventOfCode_Day09.md)
+* [Day 10: Smoke Basin](./day10/AdventOfCode_Day10.md)
 
 
