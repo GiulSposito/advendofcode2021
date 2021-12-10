@@ -125,3 +125,213 @@ sum(m[minmap]+1)
 ## [1] 504
 ```
 
+## Part Two
+
+Next, you need to find the largest basins so you know what areas are most important to avoid.
+
+A basin is all locations that eventually flow downward to a single low point. Therefore, every low point has a basin, although some basins are very small. Locations of height 9 do not count as being in any basin, and all other locations will always be part of exactly one basin.
+
+The size of a basin is the number of locations within the basin, including the low point. The example above has four basins.
+
+The top-left basin, size 3:
+
+```
+2199943210
+3987894921
+9856789892
+8767896789
+9899965678
+```
+
+The top-right basin, size 9:
+
+```
+2199943210
+3987894921
+9856789892
+8767896789
+9899965678
+```
+
+The middle basin, size 14:
+
+```
+2199943210
+3987894921
+9856789892
+8767896789
+9899965678
+```
+
+The bottom-right basin, size 9:
+
+```
+2199943210
+3987894921
+9856789892
+8767896789
+9899965678
+```
+
+### Teste Case
+
+Find the three largest basins and multiply their sizes together. In the above example, this is 9 * 14 * 9 = 1134.
+
+
+```r
+library(tidyverse)
+```
+
+```
+## ── Attaching packages ─────────────────────────────────────── tidyverse 1.3.1 ──
+```
+
+```
+## ✓ ggplot2 3.3.5     ✓ purrr   0.3.4
+## ✓ tibble  3.1.6     ✓ dplyr   1.0.7
+## ✓ tidyr   1.1.4     ✓ stringr 1.4.0
+## ✓ readr   2.1.0     ✓ forcats 0.5.1
+```
+
+```
+## ── Conflicts ────────────────────────────────────────── tidyverse_conflicts() ──
+## x dplyr::filter() masks stats::filter()
+## x dplyr::lag()    masks stats::lag()
+```
+
+```r
+library(igraph)
+```
+
+```
+## 
+## Attaching package: 'igraph'
+```
+
+```
+## The following objects are masked from 'package:dplyr':
+## 
+##     as_data_frame, groups, union
+```
+
+```
+## The following objects are masked from 'package:purrr':
+## 
+##     compose, simplify
+```
+
+```
+## The following object is masked from 'package:tidyr':
+## 
+##     crossing
+```
+
+```
+## The following object is masked from 'package:tibble':
+## 
+##     as_data_frame
+```
+
+```
+## The following objects are masked from 'package:stats':
+## 
+##     decompose, spectrum
+```
+
+```
+## The following object is masked from 'package:base':
+## 
+##     union
+```
+
+```r
+library(tidygraph)
+```
+
+```
+## 
+## Attaching package: 'tidygraph'
+```
+
+```
+## The following object is masked from 'package:igraph':
+## 
+##     groups
+```
+
+```
+## The following object is masked from 'package:stats':
+## 
+##     filter
+```
+
+```r
+# test data as input
+# input_raw <- c("2199943210","3987894921","9856789892","8767896789","9899965678")
+
+# input as array of lines
+input_raw <- readLines("./input.txt")
+
+# vector of integers
+input <- paste0(input_raw, collapse = "") |>
+  strsplit("") |>
+  unlist() |>
+  as.integer()
+
+m <- matrix(input, nrow = length(input_raw), byrow = T)
+
+nodes <- expand.grid(list(x=1:dim(m)[1], y=1:dim(m)[2])) %>% 
+  mutate(node_id = 1:nrow(.)) %>% 
+  mutate(height  = c(m)) %>% 
+  relocate(node_id, everything())
+  
+edges <- nodes %>% 
+  split(1:nrow(.)) %>% 
+  map_df(function(.n,.nodes,.mdim){
+    right_x <- .n$x
+    right_y <- .n$y+1
+    down_x  <- .n$x+1
+    down_y  <- .n$y
+    .nodes %>% 
+      mutate(from_node_id = .n$node_id) %>% 
+      filter( (x==right_x & y==right_y) |
+              (x==down_x & y==down_y) ) %>% 
+    select(from_node_id , to_node_id = node_id)
+  }, .nodes=nodes, .mdim = dim(m))
+
+g <- edges %>% 
+  set_names(c("from","to")) %>% 
+  as_tbl_graph(directed=F) %N>% 
+  mutate( heigh=c(m))
+
+g %N>% 
+  filter(heigh!=9) %>% 
+  mutate( grupo =  as.factor(group_components()) ) %>% 
+  add_count(grupo) %>% 
+  as_tibble() %>% 
+  group_by(grupo,n) %>% 
+  nest() %>% 
+  ungroup() %>% 
+  top_n(3,n) %>% 
+  summarise( answer = prod(n) )
+```
+
+```
+## Warning: The `add` argument of `group_by()` is deprecated as of dplyr 1.0.0.
+## Please use the `.add` argument instead.
+## This warning is displayed once every 8 hours.
+## Call `lifecycle::last_lifecycle_warnings()` to see where this warning was generated.
+```
+
+```
+## # A tibble: 1 × 1
+##    answer
+##     <dbl>
+## 1 1558722
+```
+
+
+### Puzzle Answer
+
+What do you get if you multiply together the sizes of the three largest basins?
+
