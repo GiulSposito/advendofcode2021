@@ -1,0 +1,449 @@
+---
+title: "Day 12: Passage Pathing"
+output:
+  html_document:
+    keep_md: yes
+editor_options: 
+  chunk_output_type: console
+---
+
+With your submarine's subterranean subsystems subsisting suboptimally, the only way you're getting out of this cave anytime soon is by finding a path yourself. Not just a path - the only way to know if you've found the best path is to find all of them.
+
+Fortunately, the sensors are still mostly working, and so you build a rough map of the remaining caves (your puzzle input). For example:
+
+```
+start-A
+start-b
+A-c
+A-b
+b-d
+A-end
+b-end
+```
+
+This is a list of how all of the caves are connected. You start in the cave named start, and your destination is the cave named end. An entry like b-d means that cave b is connected to cave d - that is, you can move between them.
+
+So, the above cave system looks roughly like this:
+
+```
+    start
+    /   \
+c--A-----b--d
+    \   /
+     end
+```
+
+```{r message=FALSE, warning=FALSE}
+library(tidyverse)
+library(tidygraph)
+library(ggraph)
+
+knitr::opts_knit$set(cache=T, warning=F, message=F)
+
+input_raw_test01 <- c("start-A",
+              "start-b",
+              "A-c",
+              "A-b",
+              "b-d",
+              "A-end",
+              "b-end")
+
+cave_network <- input_raw_test01 %>% 
+  enframe() %>% 
+  separate(value, into = c("from","to"), sep="-") %>% 
+  select(-name) %>% 
+  as_tbl_graph(directed = F)
+
+cave_network %>% 
+  ggraph() +
+  geom_edge_fan() +
+  geom_node_label(aes(label=name)) +
+  theme_void()
+
+```
+
+
+Your goal is *to find the number of distinct paths that start at start, end at end, and don't visit small caves more than once*. There are two types of caves: big caves (written in uppercase, like A) and small caves (written in lowercase, like b). It would be a waste of time to visit any small cave more than once, but big caves are large enough that it might be worth visiting them multiple times. So, all paths you find should visit small caves at most once, and can visit big caves any number of times.
+
+### Test Case 01
+
+Given these rules, there are 10 paths through this example cave system:
+
+```
+start,A,b,A,c,A,end
+start,A,b,A,end
+start,A,b,end
+start,A,c,A,b,A,end
+start,A,c,A,b,end
+start,A,c,A,end
+start,A,end
+start,b,A,c,A,end
+start,b,A,end
+start,b,end
+```
+
+```{r}
+
+#initialize visits network
+caveNet <- cave_network %>% 
+  mutate( type = factor(case_when(
+    name == "start" ~ "start",
+    name == "end" ~ "end",
+    name %in% letters ~ "small",
+    T ~ "big"
+  ))) %>% 
+  mutate( visits = 0L )
+
+
+# recursive function to find paths from a point
+findPathsFrom <- function(.net, .fromNode, .path){
+
+  # count current node
+  net <- .net %N>% 
+    mutate( visits = if_else(name==.fromNode, visits+1L, visits))
+  
+  # type of current node
+  currNode <- net %>% 
+    filter(name==.fromNode) %>% 
+    as_tibble()
+  
+  .path[length(.path)+1] <- currNode$name
+  
+  # if current type is end, so its over
+  if (currNode$type == "end") return(.path)
+  
+  paths <- net %E>% 
+    filter( edge_is_from(.N()$name==currNode$name) |
+            edge_is_to(.N()$name==currNode$name)) %>% 
+    mutate( to_node = .N()$name[to],
+            from_node = .N()$name[from],
+            node = if_else(to_node==currNode$name, from_node, to_node)) %E>% 
+    inner_join( as_tibble(activate(net, nodes)), by=c("node"="name")) %>% 
+    filter( !(type=="small" & visits>0),
+            type!="start") %>% 
+    pull(node)
+  
+  # there is not new path
+  if (length(paths)==0) return(.path)
+  
+  # go for next steps
+  paths %>% 
+    map(~findPathsFrom(net, .x, .path)) %>% 
+    return()
+}
+
+resp <- findPathsFrom(caveNet, "start", vector("character",0)) %>% 
+  rlist::list.flatten() %>% 
+  keep(~("end" %in% .x))
+
+resp 
+
+```
+
+
+
+(Each line in the above list corresponds to a single path; the caves visited by that path are listed in the order they are visited and separated by commas.)
+
+Note that in this cave system, cave d is never visited by any path: to do so, cave b would need to be visited twice (once on the way to cave d and a second time when returning from cave d), and since cave b is small, this is not allowed.
+
+### Test Case 02
+
+Here is a slightly larger example:
+
+```
+dc-end
+HN-start
+start-kj
+dc-start
+dc-HN
+LN-dc
+HN-end
+kj-sa
+kj-HN
+kj-dc
+```
+
+```{r}
+
+input_raw_test02 <- c("dc-end",
+  "HN-start",
+  "start-kj",
+  "dc-start",
+  "dc-HN",
+  "LN-dc",
+  "HN-end",
+  "kj-sa",
+  "kj-HN",
+  "kj-dc")
+
+createCaveNetwork <- function(input_data){
+  input_data %>% 
+    enframe() %>% 
+    separate(value, into = c("from","to"), sep="-") %>% 
+    select(-name) %>% 
+    as_tbl_graph(directed = F) %>%  
+    mutate( type = factor(case_when(
+      name == "start" ~ "start",
+      name == "end" ~ "end",
+      substr(name,1,1) %in% letters ~ "small",
+      T ~ "big"
+    ))) %>% 
+    mutate( visits = 0L ) %>% 
+    return()
+}
+
+cave_network <- createCaveNetwork(input_raw_test02)
+
+cave_network %>% 
+  ggraph() +
+  geom_edge_fan() +
+  geom_node_label(aes(label=name, color=type)) +
+  theme_void()
+
+```
+
+The 19 paths through it are as follows:
+
+```
+start,HN,dc,HN,end
+start,HN,dc,HN,kj,HN,end
+start,HN,dc,end
+start,HN,dc,kj,HN,end
+start,HN,end
+start,HN,kj,HN,dc,HN,end
+start,HN,kj,HN,dc,end
+start,HN,kj,HN,end
+start,HN,kj,dc,HN,end
+start,HN,kj,dc,end
+start,dc,HN,end
+start,dc,HN,kj,HN,end
+start,dc,end
+start,dc,kj,HN,end
+start,kj,HN,dc,HN,end
+start,kj,HN,dc,end
+start,kj,HN,end
+start,kj,dc,HN,end
+start,kj,dc,end
+```
+
+```{r}
+resp <- findPathsFrom(cave_network, "start", vector("character",0)) %>% 
+  rlist::list.flatten() %>% 
+  keep(~("end" %in% .x))
+
+length(resp)
+resp
+```
+
+### Test Case 03
+
+Finally, this even larger example has 226 paths through it:
+
+```
+fs-end
+he-DX
+fs-he
+start-DX
+pj-DX
+end-zg
+zg-sl
+zg-pj
+pj-he
+RW-he
+fs-DX
+pj-RW
+zg-RW
+start-pj
+he-WI
+zg-he
+pj-fs
+start-RW
+```
+
+```{r}
+input_raw_test03 <- c("fs-end","he-DX","fs-he","start-DX","pj-DX","end-zg","zg-sl",
+               "zg-pj","pj-he","RW-he","fs-DX","pj-RW","zg-RW","start-pj",
+               "he-WI","zg-he","pj-fs","start-RW")
+
+cave_network <- createCaveNetwork(input_raw_test03)
+
+cave_network %>% 
+  ggraph() +
+  geom_edge_fan() +
+  geom_node_label(aes(label=name, color=type)) +
+  theme_void()
+
+resp <- findPathsFrom(cave_network, "start", vector("character",0)) %>% 
+  rlist::list.flatten() %>% 
+  keep(~("end" %in% .x))
+
+length(resp)
+
+```
+
+### Puzzle Answer
+
+How many paths through this cave system are there that visit small caves at most once?
+
+```{r}
+input_raw <- readLines("./day12/input.txt")
+
+cave_network <- createCaveNetwork(input_raw)
+
+cave_network %>% 
+  ggraph() +
+  geom_edge_fan() +
+  geom_node_label(aes(label=name, color=type)) +
+  theme_void()
+
+resp <- findPathsFrom(cave_network, "start", vector("character",0)) %>% 
+  rlist::list.flatten() %>% 
+  keep(~("end" %in% .x))
+
+length(resp)
+```
+
+## Part 2
+
+After reviewing the available paths, you realize **you might have time to visit a single small cave twice**. Specifically, big caves can be visited any number of times, a single small cave can be visited at most twice, and the remaining small caves can be visited at most once. However, the caves named start and end can only be visited exactly once each: once you leave the start cave, you may not return to it, and once you reach the end cave, the path must end immediately.
+
+### Test Case 01
+
+Now, the 36 possible paths through the first example above are:
+
+```
+start,A,b,A,b,A,c,A,end
+start,A,b,A,b,A,end
+start,A,b,A,b,end
+start,A,b,A,c,A,b,A,end
+start,A,b,A,c,A,b,end
+start,A,b,A,c,A,c,A,end
+start,A,b,A,c,A,end
+start,A,b,A,end
+start,A,b,d,b,A,c,A,end
+start,A,b,d,b,A,end
+start,A,b,d,b,end
+start,A,b,end
+start,A,c,A,b,A,b,A,end
+start,A,c,A,b,A,b,end
+start,A,c,A,b,A,c,A,end
+start,A,c,A,b,A,end
+start,A,c,A,b,d,b,A,end
+start,A,c,A,b,d,b,end
+start,A,c,A,b,end
+start,A,c,A,c,A,b,A,end
+start,A,c,A,c,A,b,end
+start,A,c,A,c,A,end
+start,A,c,A,end
+start,A,end
+start,b,A,b,A,c,A,end
+start,b,A,b,A,end
+start,b,A,b,end
+start,b,A,c,A,b,A,end
+start,b,A,c,A,b,end
+start,b,A,c,A,c,A,end
+start,b,A,c,A,end
+start,b,A,end
+start,b,d,b,A,c,A,end
+start,b,d,b,A,end
+start,b,d,b,end
+start,b,end
+```
+
+```{r}
+library(furrr)
+
+
+# recursive function to find paths from a point
+findPaths2VisitsFrom <- function(.net, .fromNode, .path){
+
+  # count current node
+  net <- .net %N>% 
+    mutate( visits = if_else(name==.fromNode, visits+1L, visits))
+  
+  allowTwoVisits <- all((net %N>% 
+    filter(type=="small") %>% 
+    as_tibble() %>% 
+    pull(visits)) < 2)
+  
+  # type of current node
+  currNode <- net %>% 
+    filter(name==.fromNode) %>% 
+    as_tibble()
+  
+  .path[length(.path)+1] <- currNode$name
+  
+  # if current type is end, so its over
+  if (currNode$type == "end") return(.path)
+  
+  paths <- net %E>% 
+    filter( edge_is_from(.N()$name==currNode$name) |
+            edge_is_to(.N()$name==currNode$name)) %>% 
+    mutate( to_node = .N()$name[to],
+            from_node = .N()$name[from],
+            node = if_else(to_node==currNode$name, from_node, to_node)) %E>% 
+    inner_join( as_tibble(activate(net, nodes)), by=c("node"="name")) %>% 
+    filter( allowTwoVisits | !(type=="small" & visits>0),
+            type!="start") %>% 
+    pull(node)
+  
+  # there is not new path
+  if (length(paths)==0) return(.path)
+  
+  # go for next steps
+  paths %>% 
+    future_map(~findPaths2VisitsFrom(net, .x, .path)) %>% 
+    return()
+}
+
+plan(multisession, workers=8)
+```
+
+
+```{r}
+caveNet <- createCaveNetwork(input_raw_test01)
+resp <- findPaths2VisitsFrom(caveNet, "start", vector("character",0)) %>% 
+  rlist::list.flatten() %>% 
+  keep(~("end" %in% .x))
+
+length(resp)
+resp
+```
+
+
+### Test Case 02
+
+The slightly larger example above now has 103 paths through it...
+
+```{r}
+createCaveNetwork(input_raw_test02) %>% 
+  findPaths2VisitsFrom("start", vector("character",0)) %>% 
+  rlist::list.flatten() %>% 
+  keep(~("end" %in% .x)) %>% 
+  length()
+```
+
+### Test Case 03
+
+And the even larger example now has 3509 paths through it...
+
+```{r}
+createCaveNetwork(input_raw_test03) %>% 
+  findPaths2VisitsFrom("start", vector("character",0)) %>% 
+  rlist::list.flatten() %>% 
+  keep(~("end" %in% .x)) %>% 
+  length()
+```
+
+### Puzzle Answer
+
+Given these new rules, how many paths through this cave system are there?
+
+```{r}
+createCaveNetwork(input_raw) %>% 
+  findPaths2VisitsFrom("start", vector("character",0)) %>% 
+  rlist::list.flatten() %>% 
+  keep(~("end" %in% .x)) %>% 
+  length()
+```
+
