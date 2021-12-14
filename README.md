@@ -14,5 +14,6 @@ Repo to some of [Advent of Code Challenge 2021](https://adventofcode.com/) puzzl
 * [Day 10: Syntax Scoring](./day10/AdventOfCode_Day10.md)
 * [Day 11: Dumbo Octopus](./day11/AdventOfCode_Day11.md)
 * [Day 12: Passage Pathing](./day12/AdventOfCode_Day12.md)
+* [Day 13: Transparent Origami ](./day13/AdventOfCode_Day13.md)
 
 
