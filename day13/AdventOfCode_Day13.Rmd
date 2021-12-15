@@ -60,12 +60,8 @@ createTranspPaper <- function(.dotmap_raw){
     select(-name) %>% 
     mutate(x=x+1, y=y+1)
   
-  max_x = max(dotmap$x)
-  max_y = max(dotmap$y)
-  
-  m <- rep(F, max_x*max_y) %>% 
-    matrix(nrow = max_y)
-  
+  m <- matrix(F, nrow = max(dotmap$y), ncol = max(dotmap$x))
+
   for(i in 1:nrow(dotmap))
     m[dotmap$y[i], dotmap$x[i]] <- T
   
@@ -83,7 +79,6 @@ translateInstructions <- function(.folds_raw){
 }
 
 ```
-
 
 The coordinates in this example form the following pattern, where # is a dot on the paper and . is an empty, unmarked position:
 
@@ -115,6 +110,7 @@ m
 
 
 Then, there is a list of fold instructions. Each instruction indicates a line on the transparent paper and wants you to fold the paper up (for horizontal y=... lines) or left (for vertical x=... lines). In this example, the first fold instruction is fold along y=7, which designates the line formed by all of the positions where y is 7 (marked here with -):
+
 
 ```
 ...#..#..#.
@@ -222,18 +218,64 @@ input <- readPuzzleInput("./input.txt")
 m <- createTranspPaper(input$dotmap_raw)
 folds <- translateInstructions(input$folds_raw)
 
-fold <- folds[folds$step==1,]
-fold
+foldIt <- function(paper, fold){
+  # direction
+  if(fold$direction=="y"){
+    # fold in direction Y (lines)
+    fold1 <- paper[1:(fold$position-1),]
+    fold2 <- paper[dim(paper)[1]:(fold$position+1),]
 
-s1 <- m[,1:fold$position-1]
-s2 <- m[,dim(m)[2]:(fold$position+1)]
+  } else {
+    # fold in direction X (columns)
+    fold1 <- paper[,1:(fold$position-1)]
+    fold2 <- paper[,dim(paper)[2]:(fold$position+1)]
+  }
+  
+  offsets <- (dim(fold1)-dim(fold2))+1
+  resp <- fold1
+  resp[offsets[1]:dim(resp)[1],offsets[2]:dim(resp)[2]] <- 
+    fold1[offsets[1]:dim(resp)[1],offsets[2]:dim(resp)[2]] |
+    fold2
+    
+  return(resp)
+}
 
-dim(s1)
-dim(s2)
+input <- readPuzzleInput("./input.txt")
+m <- createTranspPaper(input$dotmap_raw)
+folds <- translateInstructions(input$folds_raw)
 
-# f1 <- s1|s2
-# 
-# sum(f1)
+f1 <- foldIt(m, folds[folds$step==1,])
+sum(f1) 
+```
+
+### Part Two
+
+Finish folding the transparent paper according to the instructions. The manual says the code is always eight capital letters.
+
+```{r}
+# run all fold instructions
+for(i in 1:nrow(folds)) 
+  m <- foldIt(m, folds[folds$step==i,])
+
+m 
+```
+
+What code do you use to activate the infrared thermal imaging camera system?
+
+```{r fig.height=1, fig.width=8}
+tibble(
+  y = rep(nrow(m):1,ncol(m)),
+  x = rep(1:ncol(m), each=nrow(m)),
+  val = as.vector(m)
+) %>% 
+  ggplot(aes(x=x, y=y, fill=val)) +
+  geom_tile() +
+  scale_fill_manual(values=c("grey","black"))+
+  theme_void() +
+  theme(aspect.ratio = 1/8, legend.position = "none")
 
 ```
+
+
+
 

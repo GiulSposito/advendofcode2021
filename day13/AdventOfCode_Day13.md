@@ -80,12 +80,8 @@ createTranspPaper <- function(.dotmap_raw){
     select(-name) %>% 
     mutate(x=x+1, y=y+1)
   
-  max_x = max(dotmap$x)
-  max_y = max(dotmap$y)
-  
-  m <- rep(F, max_x*max_y) %>% 
-    matrix(nrow = max_y)
-  
+  m <- matrix(F, nrow = max(dotmap$y), ncol = max(dotmap$x))
+
   for(i in 1:nrow(dotmap))
     m[dotmap$y[i], dotmap$x[i]] <- T
   
@@ -102,7 +98,6 @@ translateInstructions <- function(.folds_raw){
     return()
 }
 ```
-
 
 The coordinates in this example form the following pattern, where # is a dot on the paper and . is an empty, unmarked position:
 
@@ -154,6 +149,7 @@ m
 
 
 Then, there is a list of fold instructions. Each instruction indicates a line on the transparent paper and wants you to fold the paper up (for horizontal y=... lines) or left (for vertical x=... lines). In this example, the first fold instruction is fold along y=7, which designates the line formed by all of the positions where y is 7 (marked here with -):
+
 
 ```
 ...#..#..#.
@@ -313,39 +309,102 @@ input <- readPuzzleInput("./input.txt")
 m <- createTranspPaper(input$dotmap_raw)
 folds <- translateInstructions(input$folds_raw)
 
-fold <- folds[folds$step==1,]
-fold
+foldIt <- function(paper, fold){
+  # direction
+  if(fold$direction=="y"){
+    # fold in direction Y (lines)
+    fold1 <- paper[1:(fold$position-1),]
+    fold2 <- paper[dim(paper)[1]:(fold$position+1),]
+
+  } else {
+    # fold in direction X (columns)
+    fold1 <- paper[,1:(fold$position-1)]
+    fold2 <- paper[,dim(paper)[2]:(fold$position+1)]
+  }
+  
+  offsets <- (dim(fold1)-dim(fold2))+1
+  resp <- fold1
+  resp[offsets[1]:dim(resp)[1],offsets[2]:dim(resp)[2]] <- 
+    fold1[offsets[1]:dim(resp)[1],offsets[2]:dim(resp)[2]] |
+    fold2
+    
+  return(resp)
+}
+
+input <- readPuzzleInput("./input.txt")
+m <- createTranspPaper(input$dotmap_raw)
+folds <- translateInstructions(input$folds_raw)
+
+f1 <- foldIt(m, folds[folds$step==1,])
+sum(f1) 
 ```
 
 ```
-## # A tibble: 1 × 3
-##    step direction position
-##   <int> <chr>        <dbl>
-## 1     1 x              656
+## [1] 737
 ```
+
+### Part Two
+
+Finish folding the transparent paper according to the instructions. The manual says the code is always eight capital letters.
+
 
 ```r
-s1 <- m[,1:fold$position-1]
-s2 <- m[,dim(m)[2]:(fold$position+1)]
+# run all fold instructions
+for(i in 1:nrow(folds)) 
+  m <- foldIt(m, folds[folds$step==i,])
 
-dim(s1)
+m 
 ```
 
 ```
-## [1] 894 655
+##       [,1]  [,2]  [,3]  [,4]  [,5]  [,6]  [,7]  [,8]  [,9] [,10] [,11] [,12]
+## [1,]  TRUE  TRUE  TRUE  TRUE FALSE  TRUE FALSE FALSE  TRUE FALSE FALSE FALSE
+## [2,] FALSE FALSE FALSE  TRUE FALSE  TRUE FALSE FALSE  TRUE FALSE FALSE FALSE
+## [3,] FALSE FALSE  TRUE FALSE FALSE  TRUE FALSE FALSE  TRUE FALSE FALSE FALSE
+## [4,] FALSE  TRUE FALSE FALSE FALSE  TRUE FALSE FALSE  TRUE FALSE FALSE FALSE
+## [5,]  TRUE FALSE FALSE FALSE FALSE  TRUE FALSE FALSE  TRUE FALSE  TRUE FALSE
+## [6,]  TRUE  TRUE  TRUE  TRUE FALSE FALSE  TRUE  TRUE FALSE FALSE FALSE  TRUE
+##      [,13] [,14] [,15] [,16] [,17] [,18] [,19] [,20] [,21] [,22] [,23] [,24]
+## [1,]  TRUE  TRUE FALSE  TRUE FALSE FALSE  TRUE FALSE FALSE  TRUE  TRUE FALSE
+## [2,] FALSE  TRUE FALSE  TRUE FALSE FALSE  TRUE FALSE  TRUE FALSE FALSE  TRUE
+## [3,] FALSE  TRUE FALSE  TRUE FALSE FALSE  TRUE FALSE  TRUE FALSE FALSE  TRUE
+## [4,] FALSE  TRUE FALSE  TRUE FALSE FALSE  TRUE FALSE  TRUE  TRUE  TRUE  TRUE
+## [5,] FALSE  TRUE FALSE  TRUE FALSE FALSE  TRUE FALSE  TRUE FALSE FALSE  TRUE
+## [6,]  TRUE FALSE FALSE FALSE  TRUE  TRUE FALSE FALSE  TRUE FALSE FALSE  TRUE
+##      [,25] [,26] [,27] [,28] [,29] [,30] [,31] [,32] [,33] [,34] [,35] [,36]
+## [1,] FALSE  TRUE  TRUE  TRUE  TRUE FALSE  TRUE FALSE FALSE  TRUE FALSE  TRUE
+## [2,] FALSE  TRUE FALSE FALSE FALSE FALSE  TRUE FALSE FALSE  TRUE FALSE  TRUE
+## [3,] FALSE  TRUE  TRUE  TRUE FALSE FALSE  TRUE  TRUE  TRUE  TRUE FALSE  TRUE
+## [4,] FALSE  TRUE FALSE FALSE FALSE FALSE  TRUE FALSE FALSE  TRUE FALSE  TRUE
+## [5,] FALSE  TRUE FALSE FALSE FALSE FALSE  TRUE FALSE FALSE  TRUE FALSE  TRUE
+## [6,] FALSE  TRUE FALSE FALSE FALSE FALSE  TRUE FALSE FALSE  TRUE FALSE  TRUE
+##      [,37] [,38] [,39] [,40]
+## [1,]  TRUE  TRUE FALSE FALSE
+## [2,] FALSE FALSE  TRUE FALSE
+## [3,] FALSE FALSE  TRUE FALSE
+## [4,]  TRUE  TRUE FALSE FALSE
+## [5,] FALSE FALSE FALSE FALSE
+## [6,] FALSE FALSE FALSE FALSE
 ```
+
+What code do you use to activate the infrared thermal imaging camera system?
+
 
 ```r
-dim(s2)
+tibble(
+  y = rep(nrow(m):1,ncol(m)),
+  x = rep(1:ncol(m), each=nrow(m)),
+  val = as.vector(m)
+) %>% 
+  ggplot(aes(x=x, y=y, fill=val)) +
+  geom_tile() +
+  scale_fill_manual(values=c("grey","black"))+
+  theme_void() +
+  theme(aspect.ratio = 1/8, legend.position = "none")
 ```
 
-```
-## [1] 894 654
-```
+![](AdventOfCode_Day13_files/figure-html/unnamed-chunk-9-1.png)<!-- -->
 
-```r
-# f1 <- s1|s2
-# 
-# sum(f1)
-```
+
+
 
